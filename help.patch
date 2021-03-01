@@ -1,0 +1,370 @@
+diff --git a/public/index.html b/public/index.html
+index 9a2f861..b7804aa 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -30,19 +30,6 @@
+     <noscript>You need to enable JavaScript to run this app.</noscript>
+     <div id="root"></div>
+ 
+-    <!-- The core Firebase JS SDK is always required and must be listed first -->
+-    <script src="/__/firebase/8.2.9/firebase-app.js"></script>
+-
+-    <!-- 
+-      TODO: Add SDKs for Firebase products that you want to use
+-      https://firebase.google.com/docs/web/setup#available-libraries 
+-    -->
+-    <script src="/__/firebase/8.2.9/firebase-analytics.js"></script>
+-
+-<!-- Initialize Firebase -->
+-<script src="/__/firebase/init.js"></script>
+-
+-
+ 
+     <!--
+       This HTML file is a template.
+@@ -54,5 +41,12 @@
+       To begin the development, run `npm start` or `yarn start`.
+       To create a production bundle, use `npm run build` or `yarn build`.
+     -->
++
++    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
++    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-analytics.js"></script>
++    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-auth.js"></script>
++    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>
++  
++  
+   </body>
+ </html>
+diff --git a/src/App.js b/src/App.js
+index 6d5c02d..ac9b4bc 100644
+--- a/src/App.js
++++ b/src/App.js
+@@ -1,6 +1,4 @@
+-import './App.css';
+-import Home from './pages/Home'
+-import Login from './pages/Login'
++import React, {lazy, Suspense} from 'react'
+ 
+ import { 
+   BrowserRouter as Router, 
+@@ -8,21 +6,29 @@ import {
+   Route, 
+   } from 'react-router-dom'; 
+ 
++import * as ROUTES from './constants/routes';
++
++const Dashboard = lazy(() => import ('./pages/Dashboard'));
++const Login = lazy(() => import ('./pages/Login'));
++const SignUp = lazy(() => import ('./pages/Signup'));
++const Profile = lazy(() => import ('./pages/Profile'));
++const PageNotFound = lazy(() => import ('./pages/page-not-found'));
++
+ function App() {
+   return (
+     <Router>
+-      <Switch>
+-        <Route
+-          path="/" exact>
+-            <Home /> 
+-        </Route>
+-        <Route
+-          path="/login">
+-            <Login /> 
+-        </Route>
+-      </Switch>
+-    </Router>
++      <Suspense fallback={<p>Loading...</p>}>
++        <Switch> 
++          <Route path={ROUTES.LOGIN} component={Login} />
++          <Route path={ROUTES.SIGN_UP} component={SignUp} />
++          <Route path={ROUTES.PROFILE} component={Profile} />
++          <Route path={ROUTES.DASHBOARD} component={Dashboard} />
++          <Route path={ROUTES.PAGE_NOT_FOUND} component={PageNotFound} />
++
++        </Switch>
++    </Suspense>
++  </Router>
+   );
+ }
+ 
+-export default App;
++export default App
+\ No newline at end of file
+diff --git a/src/constants/routes.js b/src/constants/routes.js
+index 5cab1cc..4cf5b3c 100644
+--- a/src/constants/routes.js
++++ b/src/constants/routes.js
+@@ -1,5 +1,5 @@
+ export const DASHBOARD = '/';
+-export const LOGIN = '/login';
+-export const SIGN_UP = '/signup';
++export const LOGIN = '/Login';
++export const SIGN_UP = '/Signup';
+ export const PROFILE = '/p/:username';
+-export const NOT_FOUND = '/not-found';
+\ No newline at end of file
++export const PAGE_NOT_FOUND = '/page-not-found';
+\ No newline at end of file
+diff --git a/src/context/firebase.js b/src/context/firebase.js
+index 1d938d6..881e14d 100644
+--- a/src/context/firebase.js
++++ b/src/context/firebase.js
+@@ -1,5 +1,5 @@
+ 
+-import React from 'react'; 
++import React, {useState, useEffect} from 'react'; 
+ 
+ 
+ // Your web app's Firebase configuration
+@@ -8,11 +8,37 @@ const context = React.createContext()
+ const { Provider } = context
+ 
+ function ContextProvider(props) {
++  const [isLoading, setIsLoading] = useState(true)
++
+   const firebase = window.firebase
++  const { FieldValue } = window.firebase.firestore;
++
++  useEffect(() => {
++    const firebaseConfig = {
++      apiKey: "AIzaSyBMGC0oITHkMuH7zsGJnvyuH9ADITkc-ks",
++      authDomain: "react-instagram-clone-26601.firebaseapp.com",
++      projectId: "react-instagram-clone-26601",
++      storageBucket: "react-instagram-clone-26601.appspot.com",
++      messagingSenderId: "490408003054",
++      appId: "1:490408003054:web:3d8d03f87698967558faff",
++      measurementId: "G-RHVFYCDW8C"
++    };
++    console.log("Log")
++    // Initialize Firebase
++    setIsLoading(false)
++    console.log("Loaded  Data")
++    console.log(firebaseConfig)
++
++    firebase.initializeApp(firebaseConfig);
++    console.log(firebaseConfig)
++
++    firebase.analytics();
++    // eslint-disable-next-line 
++  }, [])
+ 
+   return (
+-    <Provider value={{ firebase }} >
+-      {props.children}
++    <Provider value={{ firebase, FieldValue }} >
++      {isLoading ? null : props.children}
+     </Provider>
+   )
+ }
+diff --git a/src/index.js b/src/index.js
+index 2e5f8a2..f6b677f 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -7,9 +7,11 @@ import App from './App';
+ import reportWebVitals from './reportWebVitals';
+ 
+ ReactDOM.render(
+-  <FirebaseContextProvider>
+-    <App />
+-  </FirebaseContextProvider>, 
++  <React.StrictMode>
++    <FirebaseContextProvider>
++      <App />
++    </FirebaseContextProvider>
++  </React.StrictMode>,
+   document.getElementById('root')
+ );
+ 
+diff --git a/src/pages/Dashboad.js b/src/pages/Dashboad.js
+index e69de29..79bbe24 100644
+--- a/src/pages/Dashboad.js
++++ b/src/pages/Dashboad.js
+@@ -0,0 +1,7 @@
++import React from 'react';
++
++export default function Dashboard() {
++    return (
++        <p>Hello from Dashboard</p>
++    )
++}
+\ No newline at end of file
+diff --git a/src/pages/Login.js b/src/pages/Login.js
+index 60636bc..61b5bc4 100644
+--- a/src/pages/Login.js
++++ b/src/pages/Login.js
+@@ -1,13 +1,14 @@
+ import React, {useState, useEffect, useContext} from 'react';
+-import { Link } from 'react-router-dom';
++import { Link, useHistory } from 'react-router-dom';
+ 
+ import * as ROUTES from '../constants/routes';
+ import iPhoneProfile from  '../assets/images/iphone-with-profile.jpg'
+ import logoInsta from '../assets/images/logo.png'
+-// import FirebaseContextProvider from '../context/firebase';
++import {FirebaseContext} from '../context/firebase';
+ 
+ export default function Login() {
+-    // const { firebase } = useContext(FirebaseContextProvider);
++    const history = useHistory();
++    const { firebase } = useContext(FirebaseContext);
+ 
+     const [emailAddress, setEmailAddress] = useState('')
+     const [password, setPassword] = useState('')
+@@ -15,44 +16,48 @@ export default function Login() {
+         * Check to see is email is equal to an empty string
+         * Check to see if password is equal to an empty string 
+     */
+-   const [error, setError] = useState('');
+-   const isInvalid = password === '' || emailAddress === ''; 
++    
++    // eslint-disable-next-line 
++    const [error, setError] = useState('');
++    const isInvalid = password === '' || emailAddress === ''; 
+ 
+ 
+     useEffect(() => {
+         document.title = 'Login - Instagram';
+     }, [])
+ 
+-/*
+-    * user actions
+-    * happy & sad scenarios
+-    * what happens when a user clicks login? -> connect to firebase
+-    * a async function that can handle login
+-    * handle a succesful login with 
+-    * await firebase.auth().signInWithEmailAndPassword(emailAddress, password);
+-*/
+-const handleLogin = async (event) => {
+-    event.preventDefault();
++    /*
++        * user actions
++        * happy & sad scenarios
++        * what happens when a user clicks login? -> connect to firebase
++        * a async function that can handle login
++        * handle a succesful login with 
++        * await firebase.auth().signInWithEmailAndPassword(emailAddress, password);
++    */
++    const handleLogin = async (event) => {
++        event.preventDefault();
+     
+-    try {
+-        await firebase.auth().signInWithEmailAndPassword(emailAddress, password);
+-    } catch (error) {
+-        setEmailAddress('');
+-        setPassword('');
+-        setError(error.message);
++        try {
++            await firebase.auth().signInWithEmailAndPassword(emailAddress, password)
++            history.push(ROUTES.DASHBOARD)
++
++        } catch (error) {
++            setEmailAddress('');
++            setPassword('');
++            setError(error.message);
++        }
+     }
+-}
+ 
+ 
+-/*  
+-    * wrap the await function call to firebase in a try/catch
+-    * error: catch(error)
+-    * setError(error.message)
++    /*  
++        * wrap the await function call to firebase in a try/catch
++        * error: catch(error)
++        * setError(error.message)
+ 
+-    * extra learnings: test.com
+-    * handle the email address validation client side
+-    * removes a network call!
+-*/ 
++        * extra learnings: test.com
++        * handle the email address validation client side
++        * removes a network call!
++    */ 
+ 
+     return (
+         <div className="container flex mx-auto max-w-screen-md items-center h-screen">
+@@ -60,37 +65,38 @@ const handleLogin = async (event) => {
+                 <img src={iPhoneProfile} alt="iPhone with Instagram app" />
+             </div>
+             <div className="flex flex-col w-2/5">
+-            <div className="flex flex-col items-center bg-white p-4 border mb-4">
+-                <h1 className="flex justify-center w-full">
+-                    <img src={logoInsta} alt="Instagram" className="mt-2 w-6/12 mb-4" />
+-                </h1>
+-                
+-                <form onSubmit={handleLogin} method="POST">
+-                    <input
+-                        aria-label="Enter your email address"
+-                        className="text-sm w-full mr-3 py-5 px-4 h-2 border rounded mb-2"
+-                        type="text"
+-                        placeholder="Email address"
+-                        onChange={({ target }) => setEmailAddress(target.value)}
++                <div className="flex flex-col items-center bg-white p-4 border mb-4">
++                    <h1 className="flex justify-center w-full">
++                        <img src={logoInsta} alt="Instagram" className="mt-2 w-6/12 mb-4" />
++                    </h1>
++                    {error && <p className="mb-4 text-xs text-red-500">{error}</p>}
+ 
+-                    />
+-                    <input
+-                        aria-label="Enter your password"
+-                        className="text-sm w-full mr-3 py-5 px-4 h-2 border rounded mb-2"
+-                        type="password"
+-                        placeholder="Password"
+-                        onChange={({ target }) => setPassword(target.value)}
+-                    />
+-                    <button
+-                        disabled={isInvalid}
+-                        type="submit"
+-                        className={`bg-blue-500 text-white w-full rounded h-8 font-bold 
+-                        ${ isInvalid && 'opacity-50'}`}
+-                    >
+-                        Log In
+-                    </button>
+-                </form>
+-            </div>
++                
++                    <form onSubmit={handleLogin} method="POST">
++                        <input
++                            aria-label="Enter your email address"
++                            className="text-sm w-full mr-3 py-5 px-4 h-2 border rounded mb-2"
++                            type="text"
++                            placeholder="Email address"
++                            onChange={({ target }) => setEmailAddress(target.value)}
++                        />
++                        <input
++                            aria-label="Enter your password"
++                            className="text-sm w-full mr-3 py-5 px-4 h-2 border rounded mb-2"
++                            type="password"
++                            placeholder="Password"
++                            onChange={({ target }) => setPassword(target.value)}
++                        />
++                        <button
++                            disabled={isInvalid}
++                            type="submit"
++                            className={`bg-blue-500 text-white w-full rounded h-8 font-bold 
++                            ${ isInvalid && 'opacity-50'}`}
++                            >
++                            Log In
++                        </button>
++                    </form>
++                </div>
+                 <div className="flex justify-center items-center flex-col w-full bg-white p-4 border">
+                     <p className="text-sm">
+                         Don't have an account?{' '}
+diff --git a/src/pages/SignUp.js b/src/pages/SignUp.js
+index e69de29..655bdec 100644
+--- a/src/pages/SignUp.js
++++ b/src/pages/SignUp.js
+@@ -0,0 +1,7 @@
++import React from 'react';
++
++export default function Profile() {
++    return (
++        <p>Hello from Sign Up</p>
++    )
++}
+\ No newline at end of file
