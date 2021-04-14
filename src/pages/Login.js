@@ -4,7 +4,7 @@ import { Link, useHistory } from 'react-router-dom';
 import * as ROUTES from '../constants/routes';
 import iPhoneProfile from  '../assets/images/iphone-with-profile.jpg'
 import logoInsta from '../assets/images/logo.png'
-import {FirebaseContext} from '../context/firebase';
+import FirebaseContext from '../context/firebase';
 
 export default function Login() {
     const history = useHistory();
@@ -12,15 +12,12 @@ export default function Login() {
 
     const [emailAddress, setEmailAddress] = useState('')
     const [password, setPassword] = useState('')
-    /* 
-        * Check to see is email is equal to an empty string
-        * Check to see if password is equal to an empty string 
-    */
     
     // eslint-disable-next-line 
     const [error, setError] = useState('');
-    const isInvalid = password === '' || emailAddress === ''; 
 
+    // Check to see if emaill and password are equal to an empty string
+    const isInvalid = emailAddress === '' || password === ''; 
 
     useEffect(() => {
         document.title = 'Login - Instagram';
@@ -36,11 +33,9 @@ export default function Login() {
     */
     const handleLogin = async (event) => {
         event.preventDefault();
-    
         try {
             await firebase.auth().signInWithEmailAndPassword(emailAddress, password)
-            history.push(ROUTES.DASHBOARD)
-
+            history.push(ROUTES.DASHBOARD); 
         } catch (error) {
             setEmailAddress('');
             setPassword('');
